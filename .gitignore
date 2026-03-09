@@ -11,3 +11,5 @@ scrap.py
 *.csv
 *.parquet
 *.txt
+finnhub_data.py
+realtime data/
