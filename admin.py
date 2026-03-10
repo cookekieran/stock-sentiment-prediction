@@ -3,11 +3,19 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-ALPACA_API_KEY=os.getenv("ALPACA_API_KEY")
-ALPACA_SECRET_KEY=os.getenv("ALPACA_SECRET_CODE")
+def get_env_var(key):
+    value = os.getenv(key)
+    if value is None:
+        raise EnvironmentError(f"{key} is not set.")
+    return value
 
-POSTGRES_PASS=os.getenv("POSTGRES_PASS")
+ALPACA_API_KEY=get_env_var("ALPACA_API_KEY")
+ALPACA_SECRET_KEY=get_env_var("ALPACA_SECRET_CODE")
 
-DB_HOST=os.getenv("DB_HOST")
-DB_USER=os.getenv("DB_USER")
-DB_PASSWORD=os.getenv("DB_PASSWORD")
+
+POSTGRES_PASS=get_env_var("POSTGRES_PASS")
+
+DB_HOST=get_env_var("DB_HOST")
+DB_USER=get_env_var("DB_USER")
+DB_PASSWORD=get_env_var("DB_PASSWORD")
+
