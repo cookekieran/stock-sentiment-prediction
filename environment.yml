@@ -21,6 +21,7 @@ dependencies:
       - numba
       - pydantic
       - python-dotenv
+      - sentencepiece
       - shap
       - tqdm
       - yfinance
