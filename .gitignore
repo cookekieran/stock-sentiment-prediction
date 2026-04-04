@@ -15,3 +15,4 @@ scrap.py
 finnhub_data.py
 realtime data/
 **/env/
+**/venv/
