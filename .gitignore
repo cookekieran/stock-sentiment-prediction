@@ -11,6 +11,7 @@ scrap.py
 *.csv
 *.parquet
 *.txt
+!requirements.txt
 finnhub_data.py
 realtime data/
 **/env/
