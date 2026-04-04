@@ -13,3 +13,4 @@ scrap.py
 *.txt
 finnhub_data.py
 realtime data/
+**/env/
