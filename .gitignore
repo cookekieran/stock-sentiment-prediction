@@ -16,3 +16,12 @@ finnhub_data.py
 realtime data/
 **/env/
 **/venv/
+.venv/
+.cache/
+.local/
+.jupyter/
+.bash_history
+.bashrc
+.gitconfig
+.npm/
+.ssh/
