@@ -25,3 +25,4 @@ realtime data/
 .gitconfig
 .npm/
 .ssh/
+.ipython/
