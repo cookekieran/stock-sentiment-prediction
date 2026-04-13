@@ -81,6 +81,3 @@ def repair_ticker(ticker, start_date_str, end_date_str, days_per_step=30):
             break
 
     print(f"--- REPAIR SESSION FINISHED ---")
-
-# execute
-repair_ticker("META", "2025-09-17", "2026-03-16")
