@@ -5,8 +5,9 @@ import os
 from datetime import datetime, timedelta
 from sqlalchemy import create_engine, text
 from admin import POSTGRES_PASS, ALPHA_VANTAGE_API_KEY
+from news_collector_backdated import repair_ticker
 
-ALL_TICKERS = ["NVDA", "AAPL", "MSFT", "GOOGL", "AMZN", "META", "TSLA", "SPY", "QQQ", "XAU", "XAG", "WTI"]
+ALL_TICKERS = ["NVDA", "AAPL", "MSFT", "GOOGL", "AMZN", "META", "TSLA", "SPY", "QQQ", "GLD", "SLV", "USO"]
 day_of_year = datetime.now().timetuple().tm_yday
 ticker_index = day_of_year % len(ALL_TICKERS)
 CURRENT_TICKER = ALL_TICKERS[ticker_index]
@@ -80,22 +81,35 @@ for i in range(25):
     if not df.empty:
         try:
             records = df.to_dict(orient='records')
-            
+
+            stmt = text("""
+                INSERT INTO news_sentiment 
+                (title, time_published, url, summary, source, overall_sentiment_score, overall_sentiment_label, ticker_sentiment, topics)
+                VALUES (:title, :time_published, :url, :summary, :source, :overall_sentiment_score, :overall_sentiment_label, :ticker_sentiment, :topics)
+                ON CONFLICT (url) DO NOTHING
+            """)
+
             with engine.begin() as conn:
-                stmt = text("""
-                    INSERT INTO news_sentiment 
-                    (title, time_published, url, summary, source, overall_sentiment_score, overall_sentiment_label, ticker_sentiment, topics)
-                    VALUES (:title, :time_published, :url, :summary, :source, :overall_sentiment_score, :overall_sentiment_label, :ticker_sentiment, :topics)
-                    ON CONFLICT (url) DO NOTHING
-                """)
                 conn.execute(stmt, records)
-            
-            print(f"Successfully saved {len(df)} articles.")
+
+            if len(df) >= 1000:
+                print(f"1000 API limit hit for {CURRENT_TICKER} | {t_from} → {t_to} | repairing...")
+
+                repair_ticker(
+                    CURRENT_TICKER,
+                    current_pointer.strftime("%Y-%m-%d"),
+                    window_end.strftime("%Y-%m-%d")
+                )
+
+            else:
+                print(f"Successfully saved {len(df)} articles.")
+
             current_pointer = window_end
 
         except Exception as e:
             print(f"Database Error: {e}")
-            break 
+            break
+
     else:
         print(f"No news found for {CURRENT_TICKER}. Jumping to next window.")
         current_pointer = window_end
