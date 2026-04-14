@@ -68,7 +68,7 @@ for i in range(25):
         break
     
     # request 90 days at a time
-    window_end = current_pointer + timedelta(days=90)
+    window_end = min(current_pointer + timedelta(days=90), end_goal)
     t_from = current_pointer.strftime("%Y%m%dT%H%M")
     t_to = window_end.strftime("%Y%m%dT%H%M")
     
