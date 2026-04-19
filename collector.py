@@ -20,6 +20,10 @@ today = date.today()
 yesterday_object = today - timedelta(days=1)
 yesterday = yesterday_object.strftime("%Y-%m-%d")
 
+# manual backfill
+# yesterday = "2026-04-17" 
+# print(f"Backfilling data for: {yesterday}")
+
 all_prices = []
 
 tickers = [
