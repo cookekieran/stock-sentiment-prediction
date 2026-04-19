@@ -67,8 +67,9 @@ for i in range(25):
         print(f"Backfill complete!")
         break
     
-    # request 120 days at a time
-    window_end = min(current_pointer + timedelta(days=120), end_goal)
+    # request n days at a time
+    n = 90
+    window_end = min(current_pointer + timedelta(days=n), end_goal)
     t_from = current_pointer.strftime("%Y%m%dT%H%M")
     t_to = window_end.strftime("%Y%m%dT%H%M")
     
