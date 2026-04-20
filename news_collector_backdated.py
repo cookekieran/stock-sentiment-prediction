@@ -81,3 +81,6 @@ def repair_ticker(ticker, start_date_str, end_date_str, days_per_step=30):
             break
 
     print(f"--- REPAIR SESSION FINISHED ---")
+
+# backfill to-do
+repair_ticker("NVDA", "2025-10-31", "2025-11-05", days_per_step=1)
