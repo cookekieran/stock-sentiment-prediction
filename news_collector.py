@@ -5,19 +5,18 @@ import os
 from datetime import datetime, timedelta
 from sqlalchemy import create_engine, text
 from admin import POSTGRES_PASS, ALPHA_VANTAGE_API_KEY
-from news_collector_backdated import repair_ticker
 
-ALL_TICKERS = ["NVDA", "AAPL", "MSFT", "GOOGL", "AMZN", "META", "TSLA", "SPY", "QQQ", "GLD", "SLV", "USO"]
+# ALL_TICKERS = ["NVDA", "AAPL", "MSFT", "GOOGL", "AMZN", "META", "TSLA", "SPY", "QQQ", "GLD", "SLV", "USO"]
 day_of_year = datetime.now().timetuple().tm_yday
-ticker_index = day_of_year % len(ALL_TICKERS)
-CURRENT_TICKER = ALL_TICKERS[ticker_index]
-
-print(f"--- AUTOMATION: Today is day {day_of_year}. Target Ticker: {CURRENT_TICKER} ---")
-
+# ticker_index = day_of_year % len(ALL_TICKERS)
+# CURRENT_TICKER = ALL_TICKERS[ticker_index]
+CURRENT_TICKER = "AAPL"
 
 DB_URL = f'postgresql://postgres:{POSTGRES_PASS}@localhost:5432/stock_market'
 engine = create_engine(DB_URL)
 CHECKPOINT_FILE = f"checkpoint_{CURRENT_TICKER}.txt"
+
+print(f"--- AUTOMATION: Today is day {day_of_year}. Target Ticker: {CURRENT_TICKER} ---")
 
 def get_current_pointer():
     if os.path.exists(CHECKPOINT_FILE):
@@ -27,36 +26,79 @@ def get_current_pointer():
     return datetime(2023, 1, 1)
 
 def fetch_news_chunk(ticker, start_time, end_time):
+
+    start_str = start_time.strftime("%Y%m%dT%H%M")
+    end_str = end_time.strftime("%Y%m%dT%H%M")
+
+
     url = (f"https://www.alphavantage.co/query?function=NEWS_SENTIMENT"
-           f"&tickers={ticker}&time_from={start_time}&time_to={end_time}"
+           f"&tickers={ticker}&time_from={start_str}&time_to={end_str}"
            f"&sort=EARLIEST&limit=1000&apikey={ALPHA_VANTAGE_API_KEY}")
     try:
         response = requests.get(url)
         data = response.json()
+
         if "Note" in data or "Information" in data:
             print(f"API Limit reached: {data.get('Note', data.get('Information'))}")
             return None
+        
         if "feed" not in data:
-            return pd.DataFrame()
+            print(f"No data for {start_time}, {end_time} retrieved")
+            return True
+        
 
-        processed_news = []
-        for item in data["feed"]:
-            dt_obj = datetime.strptime(item.get("time_published"), "%Y%m%dT%H%M%S")
-            processed_news.append({
-                "title": item.get("title"),
-                "time_published": dt_obj,
-                "url": item.get("url"),
-                "summary": item.get("summary"),
-                "source": item.get("source"),
-                "overall_sentiment_score": float(item.get("overall_sentiment_score", 0)),
-                "overall_sentiment_label": item.get("overall_sentiment_label"),
-                "ticker_sentiment": str(item.get("ticker_sentiment", [])),
-                "topics": str(item.get("topics", [])) 
-            })
-        return pd.DataFrame(processed_news)
+        count = len(data["feed"])
+
+        if count > 0:       
+            processed_news = []
+
+            for item in data["feed"]:
+                dt_obj = datetime.strptime(item.get("time_published"), "%Y%m%dT%H%M%S")
+                processed_news.append({
+                    "title": item.get("title"),
+                    "time_published": dt_obj,
+                    "url": item.get("url"),
+                    "summary": item.get("summary"),
+                    "source": item.get("source"),
+                    "overall_sentiment_score": float(item.get("overall_sentiment_score", 0)),
+                    "overall_sentiment_label": item.get("overall_sentiment_label"),
+                    "ticker_sentiment": str(item.get("ticker_sentiment", [])),
+                    "topics": str(item.get("topics", [])) 
+                })
+
+            
+            df = pd.DataFrame(processed_news)
+            with engine.begin() as conn:
+                stmt = text("""
+                    INSERT INTO news_sentiment 
+                    (title, time_published, url, summary, source, overall_sentiment_score, overall_sentiment_label, ticker_sentiment, topics)
+                    VALUES (:title, :time_published, :url, :summary, :source, :overall_sentiment_score, :overall_sentiment_label, :ticker_sentiment, :topics)
+                    ON CONFLICT (url) DO NOTHING
+                """)
+                conn.execute(stmt, df.to_dict(orient='records'))
+            
+            print(f"Saved {count} articles ({start_str} -> {end_str})")
+
+        
+            if count >= 1000:
+                duration = end_time - start_time
+                if duration > timedelta(minutes=30): # Avoid infinite loops on extremely high volume
+                    mid_point = start_time + (duration / 2)
+                    print(f"1000 article API limit reached, halfing window to {duration/2}")
+                    
+                    time.sleep(15)
+                    fetch_news_chunk(ticker, start_time, mid_point)
+                    time.sleep(15) # Cooldown
+                    fetch_news_chunk(ticker, mid_point, end_time)
+                else:
+                    print("Window too small to split further. Moving on.")
+
+            return True
+        
     except Exception as e:
-        print(f"Request Error: {e}")
-        return None
+        print(f"Error: {e}")
+        return False
+
 
 
 current_pointer = get_current_pointer()
@@ -70,51 +112,18 @@ for i in range(25):
     # request n days at a time
     n = 90
     window_end = min(current_pointer + timedelta(days=n), end_goal)
+
     t_from = current_pointer.strftime("%Y%m%dT%H%M")
     t_to = window_end.strftime("%Y%m%dT%H%M")
     
     print(f"Request {i+1}/25 | {CURRENT_TICKER} | {t_from} to {t_to}")
     
-    df = fetch_news_chunk(CURRENT_TICKER, t_from, t_to)
+    success_bool = fetch_news_chunk(CURRENT_TICKER, current_pointer, window_end)
     
-    if df is None: break 
-    
-    if not df.empty:
-        try:
-            records = df.to_dict(orient='records')
+    if success_bool is None:
+        break 
 
-            stmt = text("""
-                INSERT INTO news_sentiment 
-                (title, time_published, url, summary, source, overall_sentiment_score, overall_sentiment_label, ticker_sentiment, topics)
-                VALUES (:title, :time_published, :url, :summary, :source, :overall_sentiment_score, :overall_sentiment_label, :ticker_sentiment, :topics)
-                ON CONFLICT (url) DO NOTHING
-            """)
-
-            with engine.begin() as conn:
-                conn.execute(stmt, records)
-
-            if len(df) >= 1000:
-                print(f"1000 API limit hit for {CURRENT_TICKER} | {t_from} → {t_to} | repairing...")
-
-                repair_ticker(
-                    CURRENT_TICKER,
-                    current_pointer.strftime("%Y-%m-%d"),
-                    window_end.strftime("%Y-%m-%d")
-                )
-
-            else:
-                print(f"Successfully saved {len(df)} articles.")
-
-            current_pointer = window_end
-
-        except Exception as e:
-            print(f"Database Error: {e}")
-            break
-
-    else:
-        print(f"No news found for {CURRENT_TICKER}. Jumping to next window.")
-        current_pointer = window_end
-    
+    current_pointer = window_end
     with open(CHECKPOINT_FILE, "w") as f:
         f.write(current_pointer.strftime("%Y%m%dT%H%M"))
     
