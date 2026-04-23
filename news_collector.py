@@ -6,15 +6,17 @@ from datetime import datetime, timedelta
 from sqlalchemy import create_engine, text
 from admin import POSTGRES_PASS, ALPHA_VANTAGE_API_KEY
 
+
 # ALL_TICKERS = ["NVDA", "AAPL", "MSFT", "GOOGL", "AMZN", "META", "TSLA", "SPY", "QQQ", "GLD", "SLV", "USO"]
 day_of_year = datetime.now().timetuple().tm_yday
 # ticker_index = day_of_year % len(ALL_TICKERS)
 # CURRENT_TICKER = ALL_TICKERS[ticker_index]
-CURRENT_TICKER = "AAPL"
+CURRENT_TICKER = "MSFT"
 
 DB_URL = f'postgresql://postgres:{POSTGRES_PASS}@localhost:5432/stock_market'
 engine = create_engine(DB_URL)
-CHECKPOINT_FILE = f"checkpoint_{CURRENT_TICKER}.txt"
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+CHECKPOINT_FILE = os.path.join(SCRIPT_DIR, f"checkpoint_{CURRENT_TICKER}.txt")
 
 print(f"--- AUTOMATION: Today is day {day_of_year}. Target Ticker: {CURRENT_TICKER} ---")
 
@@ -24,6 +26,7 @@ def get_current_pointer():
             val = f.read().strip()
             return datetime.strptime(val, "%Y%m%dT%H%M")
     return datetime(2023, 1, 1)
+
 
 def fetch_news_chunk(ticker, start_time, end_time):
 
@@ -110,7 +113,7 @@ for i in range(25):
         break
     
     # request n days at a time
-    n = 90
+    n = 30
     window_end = min(current_pointer + timedelta(days=n), end_goal)
 
     t_from = current_pointer.strftime("%Y%m%dT%H%M")
