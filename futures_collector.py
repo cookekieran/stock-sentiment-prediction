@@ -18,7 +18,7 @@ yesterday_object = today - timedelta(days=1)
 yesterday = yesterday_object.strftime("%Y-%m-%d")
 
 # manual script to fix gaps
-# yesterday = "2026-04-17" 
+# yesterday = "2026-04-28" 
 # print(f"Backfilling data for: {yesterday}")
 
 all_futures_prices = []
