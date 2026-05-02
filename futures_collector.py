@@ -9,7 +9,7 @@ import pandas as pd
 from admin import POSTGRES_PASS, DB_USER, DB_PASSWORD, DB_HOST
 from sqlalchemy import create_engine
 import datetime
-from sqlalchemy.exc import IntegrityError, ProgrammingError
+from sqlalchemy.exc import IntegrityError, ProgrammingError, OperationalError
 
 day_of_week = datetime.datetime.now().weekday()
 
@@ -42,11 +42,13 @@ for engine in [local_engine, cloud_engine]:
     try:
         master_df.to_sql('futures_prices', engine, if_exists='append', index=True)
 
+    except OperationalError:
+        print(f"Cannot connect to cloud storage!")
     except IntegrityError:
         print("Data already exists...")
     except ProgrammingError:
         print("Column mismatch error")
     except Exception as e:
         print(f"An unexpected error ocured {e}")
-    finally:
-        print("Script finished.")
+
+print("Script finished.")
