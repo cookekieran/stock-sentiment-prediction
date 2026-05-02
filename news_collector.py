@@ -74,7 +74,7 @@ def fetch_news_chunk(ticker, start_time, end_time):
             with engine.begin() as conn:
                 stmt = text("""
                     INSERT INTO news_sentiment 
-                    (title, time_published, url, summary, source, overall_sentiment_score, overall_sentiment_label, ticker_sentiment, topics)
+                    (requested_entity, title, time_published, url, summary, source, overall_sentiment_score, overall_sentiment_label, ticker_sentiment, topics)
                     VALUES (:title, :time_published, :url, :summary, :source, :overall_sentiment_score, :overall_sentiment_label, :ticker_sentiment, :topics)
                     ON CONFLICT (url) DO NOTHING
                 """)
