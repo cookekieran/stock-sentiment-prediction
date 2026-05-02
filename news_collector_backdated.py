@@ -46,6 +46,7 @@ def repair_ticker(ticker, start_date_str, end_date_str, days_per_step=30):
             processed_news = []
             for item in data["feed"]:
                 processed_news.append({
+                    "requested_entity": ticker,
                     "title": item.get("title"),
                     "time_published": datetime.strptime(item.get("time_published"), "%Y%m%dT%H%M%S"),
                     "url": item.get("url"),

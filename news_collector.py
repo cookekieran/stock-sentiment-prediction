@@ -57,6 +57,7 @@ def fetch_news_chunk(ticker, start_time, end_time):
             for item in data["feed"]:
                 dt_obj = datetime.strptime(item.get("time_published"), "%Y%m%dT%H%M%S")
                 processed_news.append({
+                    "requested_entity": ticker,
                     "title": item.get("title"),
                     "time_published": dt_obj,
                     "url": item.get("url"),
