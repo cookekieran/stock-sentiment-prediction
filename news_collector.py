@@ -75,7 +75,7 @@ def fetch_news_chunk(ticker, start_time, end_time):
                 stmt = text("""
                     INSERT INTO news_sentiment 
                     (requested_entity, title, time_published, url, summary, source, overall_sentiment_score, overall_sentiment_label, ticker_sentiment, topics)
-                    VALUES (:title, :time_published, :url, :summary, :source, :overall_sentiment_score, :overall_sentiment_label, :ticker_sentiment, :topics)
+                    VALUES (:requested_entity, :title, :time_published, :url, :summary, :source, :overall_sentiment_score, :overall_sentiment_label, :ticker_sentiment, :topics)
                     ON CONFLICT (url) DO NOTHING
                 """)
                 conn.execute(stmt, df.to_dict(orient='records'))
